@@ -1,0 +1,47 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	<ServiceWorkerAssetsManifest Condition="'$(Configuration)' == 'Release'">service-worker-assets.js</ServiceWorkerAssetsManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Data\e_sqlite3.o" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Data\e_sqlite3.o" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="6.0.16" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="6.0.16" PrivateAssets="all" />
+	<PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
+	<PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="6.0.0" />
+	<PackageReference Include="Microsoft.AspNetCore.Components.CustomElements" Version="0.1.0-alpha.21466.1" />
+	<PackageReference Include="SQLitePCLRaw.Bundle_e_sqlite3" Version="2.0.6" />
+
+	 <!-- gRPC -->
+	<PackageReference Include="Google.Protobuf" Version="3.18.1" />
+	<PackageReference Include="Grpc.Net.Client" Version="2.40.0" />
+	<PackageReference Include="Grpc.Net.Client.Web" Version="2.40.0" />
+	<PackageReference Include="Grpc.Tools" Version="2.41.0">
+		<PrivateAssets>all</PrivateAssets>
+		<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	</PackageReference>
+	<Protobuf Include="..\BlazorInventory.Server\Manufacturing.proto" GrpcServices="Client" />
+	<!-- EF Core and Sqlite -->
+	<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.0-rc.1.21452.10" />
+	<NativeFileReference Include="Data\e_sqlite3.o" />
+  </ItemGroup>
+  <ItemGroup>
+	<ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+	<None Remove="Directory.build.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\QuickGrid\QuickGrid.csproj" />
+  </ItemGroup>
+</Project>
