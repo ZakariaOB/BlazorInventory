@@ -1,25 +1,44 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using BlazorInventory.Data.Models;
+using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
 namespace BlazorInventory.Data
 {
-    internal class ClientSideDbContext : DbContext
+    internal partial class ClientSideDbContext : DbContext
     {
         public DbSet<Part> Parts { get; set; } = default!;
 
         public ClientSideDbContext(DbContextOptions<ClientSideDbContext> options)
-            : base(options)
+        : base(options)
         {
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder);
+            modelBuilder.ApplyConfigurationsFromAssembly(
+                    Assembly.GetExecutingAssembly(),
+                    t => t.GetInterfaces().Any(i =>
+                            i.IsGenericType &&
+                            i.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>)));
 
-            modelBuilder.Entity<Part>().HasIndex(nameof(Part.ModifiedTicks), nameof(Part.PartId));
-            modelBuilder.Entity<Part>().HasIndex(nameof(Part.Category), nameof(Part.Subcategory));
-            modelBuilder.Entity<Part>().HasIndex(x => x.Stock);
-            modelBuilder.Entity<Part>().HasIndex(x => x.Name);
-            modelBuilder.Entity<Part>().Property(x => x.Name).UseCollation("nocase");
+            OnModelCreatingPartial(modelBuilder);
+        }
+
+        partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+
+        public DbSet<Item> Items { get; set; } = default!;
+
+        public DbSet<ItemRevised> ItemsRevised { get; set; } = default!;
+
+        public DbSet<Group> Groups { get; set; } = default!;
+
+        public DbSet<SubGroup> SubGroups { get; set; } = default!;
+
+        public void ClearTable<TEntity>() where TEntity : class
+        {
+            var entities = Set<TEntity>();
+            entities.RemoveRange(entities);
+            SaveChanges();
         }
     }
 }

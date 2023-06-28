@@ -21,12 +21,5 @@ namespace BlazorInventory.Wasm.Data
                 return new ManufacturingData.ManufacturingDataClient(channel);
             });
         }
-
-        public static void AddManufacturingDataDbContext(this IServiceCollection serviceCollection)
-        {
-            serviceCollection.AddDbContextFactory<ClientSideDbContext>(
-                options => options.UseSqlite($"Filename={DataSynchronizer.SqliteDbFilename}"));
-            serviceCollection.AddScoped<DataSynchronizer>();
-        }
     }
 }

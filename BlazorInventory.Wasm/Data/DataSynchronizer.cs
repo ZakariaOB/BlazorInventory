@@ -1,7 +1,11 @@
 ﻿
+using BlazorInventory.Data.Request;
+using BlazorInventory.Data.Response;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
 using System.Data.Common;
+using System.Net.Http.Json;
+using System.Net.Http;
 using System.Runtime.InteropServices;
 
 namespace BlazorInventory.Data
@@ -10,18 +14,24 @@ namespace BlazorInventory.Data
     // This service synchronizes the Sqlite DB with both the backend server and the browser's IndexedDb storage
     class DataSynchronizer
     {
-        public const string SqliteDbFilename = "app.db";
+        public const string SqliteDbFilename = "items.db";
         private readonly Task firstTimeSetupTask;
         private readonly IDbContextFactory<ClientSideDbContext> dbContextFactory;
         private readonly ManufacturingData.ManufacturingDataClient manufacturingData;
         private bool isSynchronizing;
+        private HttpClient _httpClient;
+        private IConfiguration _configuration;
 
-        public DataSynchronizer(IJSRuntime js, 
-            IDbContextFactory<ClientSideDbContext> dbContextFactory, 
-            ManufacturingData.ManufacturingDataClient manufacturingData)
+        public DataSynchronizer(IJSRuntime js,
+            IDbContextFactory<ClientSideDbContext> dbContextFactory,
+            ManufacturingData.ManufacturingDataClient manufacturingData,
+            HttpClient httpClient,
+            IConfiguration configuration)
         {
             this.dbContextFactory = dbContextFactory;
             this.manufacturingData = manufacturingData;
+            _httpClient = httpClient;
+            _configuration = configuration;
             firstTimeSetupTask = FirstTimeSetupAsync(js, synchronizeWithIndexedDb: true);
         }
 
@@ -156,6 +166,23 @@ namespace BlazorInventory.Data
                 return parameter;
             }
         }
-    }
 
+
+        public async Task<ItemsResponse?> GetItems(ItemsRequest request)
+        {
+            HttpResponseMessage response = await _httpClient.PostAsJsonAsync(
+                $"{_configuration["BackendOrigin"]}/api/items/request", 
+                request);
+
+            if (response == null || !response.IsSuccessStatusCode)
+            {
+                return new ItemsResponse();
+            }
+
+            ItemsResponse? itemsResponse = await response.Content.ReadFromJsonAsync<ItemsResponse?>();
+            return itemsResponse;
+        }
+
+    }
 }
+

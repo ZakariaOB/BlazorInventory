@@ -29,13 +29,15 @@ namespace BlazorInventory.Server
 
         public override async Task<PartsReply> GetParts(PartsRequest request, ServerCallContext context)
         {
-            var modifiedParts = db.Parts
+            var modifiedParts = Enumerable.Empty<Part>();
+                /*db.Parts
                 .OrderBy(p => p.ModifiedTicks)
-                .Where(p => p.ModifiedTicks > request.ModifiedSinceTicks);
+                .Where(p => p.ModifiedTicks > request.ModifiedSinceTicks);*/
 
             PartsReply reply = new ();
+            /*
             reply.ModifiedCount = await modifiedParts.CountAsync();
-            reply.Parts.AddRange(await modifiedParts.Take(request.MaxCount).ToListAsync());
+            reply.Parts.AddRange(await modifiedParts.Take(request.MaxCount).ToListAsync());*/
             return reply;
         }
     }

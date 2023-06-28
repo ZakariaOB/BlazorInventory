@@ -1,8 +1,11 @@
 using BlazorInventory.Data;
+using BlazorInventory.Data.Repository;
 using BlazorInventory.Wasm;
 using BlazorInventory.Wasm.Data;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 
 namespace BlazorInventory
@@ -26,7 +29,15 @@ namespace BlazorInventory
             });
 
             // Sets up EF Core with Sqlite using QuickGrid
-            builder.Services.AddManufacturingDataDbContext();
+            builder.Services.AddDbContextFactory<ClientSideDbContext>(
+                options => options.UseSqlite($"Filename={DataSynchronizer.SqliteDbFilename}"));
+            builder.Services.AddScoped<DataSynchronizer>();
+
+            builder.Services.AddScoped<IItemRepository, ItemRepository>();
+            builder.Services.AddScoped<IItemRevisedRepository, ItemRevisedRepository>();
+            builder.Services.AddScoped<IGroupRepository, GroupRepository>();
+            builder.Services.AddScoped<ISubGroupRepository, SubGroupRepository>();
+
             await builder.Build().RunAsync();
         }
     }

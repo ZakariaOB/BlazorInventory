@@ -18,6 +18,7 @@ using BlazorInventory.Data;
 using System.IO;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
+using BlazorInventory.Data.Repository;
 
 namespace BlazorInventory.Wasm.Pages
 {
@@ -43,6 +44,9 @@ namespace BlazorInventory.Wasm.Pages
         [Inject]
         DataSynchronizer? DataSynchronizer { get; set; }
 
+        [Inject]
+        IItemRepository? ItemRepository { get; set; }
+
         protected override async Task OnInitializedAsync()
         {
             isLoading = true;
@@ -63,7 +67,17 @@ namespace BlazorInventory.Wasm.Pages
 
         private async Task InitDashboardData()
         {
-            IQueryable<Part>? parts = this.clientSideDbContext?.Parts;
+            var items = clientSideDbContext?.Items.ToList();
+            var item = new Item
+            {
+                Id = 1,
+                Description = "Hello",
+                Quantity = 50
+            };
+            ItemRepository!.Add(item);
+            var items2 = clientSideDbContext?.Items.ToList();
+            
+            IQueryable<Part>? parts = clientSideDbContext?.Parts;
             if (parts == null || !parts.Any())
             {
                 return;
