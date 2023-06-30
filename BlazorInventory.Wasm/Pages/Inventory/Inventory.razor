@@ -6,13 +6,13 @@
 @implements IDisposable
 <PageTitle>Inventory</PageTitle>
 <SyncStatus />
-<PartDetails Part="selectedPart" OnHide="@(() => { selectedPart = null; })" />
+<ItemDetails Item="@selectedItem" OnHide="@(() => { selectedItem = null; })" />
 
 @if (db is not null)
 {
     <div class="inventory-grid">
-        <Grid Virtualize="true" Items="@GetFilteredParts()" ItemKey="@(x => x.PartId)" ItemSize="35">
-            <TemplateColumn 
+        <Grid Virtualize="true" Items="@GetFilteredItems()" ItemKey="@(x => x.Id)" ItemSize="35">
+            <!--<TemplateColumn 
                 Title="Category" 
                 SortBy="@(items => items.SortByAscending(x => x.Category).ThenAscending(x => x.Subcategory))" Class="col-category">
                 <ChildContent>@context.Category / @context.Subcategory</ChildContent>
@@ -38,14 +38,14 @@
                     <div><button class="bg-gray-200 px-5 py-1 mb-2" @onclick="@(() => { categories = Array.Empty<string>(); subcategories = Array.Empty<string>(); })">Reset</button></div>
                 </ColumnOptions>
             </TemplateColumn>
-
-            <PropertyColumn Title="Name" Property="@(x => x.Name)" Class="col-name" OnCellClicked="@((Part part) => { selectedPart = part; })">
+            -->
+            <PropertyColumn Title="Name" Property="@(x => x.Name)" Class="col-name" OnCellClicked="@((Item item) => { selectedItem = item; })">
                 <ColumnOptions>
                     <input @bind="searchName" @bind:event="oninput" type="search" placeholder="Search..." />
                 </ColumnOptions>
             </PropertyColumn>
 
-            <PropertyColumn Title="Location" Property="@(x => x.Location)" Class="col-location" />
+            <PropertyColumn Title="Responsible" Property="@(x => x.ResponsibleIdentifier)" Class="col-location" />
 
             <PropertyColumn Title="Stock" Property="@(x => x.Stock)" Format="N0" Align="Align.Right" Class="col-stock">
                 <ColumnOptions>
@@ -56,11 +56,11 @@
                 </ColumnOptions>
             </PropertyColumn>
 
-            <PropertyColumn Title="Cost ($)" Property="@(x => x.PriceCents/100)" Format="N0" Align="Align.Right" Class="col-cost" />
+            <PropertyColumn Title="Cost ($)" Property="@(x => x.Price/100)" Format="N0" Align="Align.Right" Class="col-cost" />
 
         </Grid>
         <div class="status-bar">
-            Showing @GetFilteredParts()?.Count().ToString("N0") items
+            Showing @GetFilteredItems()?.Count().ToString("N0") items
         </div>
     </div>
 }
@@ -76,23 +76,23 @@ else {
     string[] subcategories = Array.Empty<string>();
     string searchName = string.Empty;
     int minStock, maxStock = 50000;
-    Part? selectedPart;
-    IQueryable<Part>? GetFilteredParts()
+    Item? selectedItem;
+    IQueryable<Item>? GetFilteredItems()
     {
         if (db is null)
         {
             return null;
         }
 
-        var result = db.Parts.AsNoTracking().AsQueryable();
-        if (categories.Any())
+        var result = db.Items.AsNoTracking().AsQueryable();
+        /*if (categories.Any())
         {
             result = result.Where(x => categories.Contains(x.Category));
         }
         if (subcategories.Any())
         {
             result = result.Where(x => subcategories.Contains(x.Subcategory));
-        }
+        }*/
         if (!string.IsNullOrEmpty(searchName))
         {
             result = result.Where(x => EF.Functions.Like(x.Name, searchName.Replace("%", "\\%") + "%", "\\"));

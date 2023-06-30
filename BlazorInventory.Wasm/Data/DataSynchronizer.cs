@@ -7,6 +7,9 @@ using System.Data.Common;
 using System.Net.Http.Json;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using Google.Protobuf.WellKnownTypes;
+using BlazorInventory.Data.Models;
+using System.IO;
 
 namespace BlazorInventory.Data
 {
@@ -85,28 +88,39 @@ namespace BlazorInventory.Data
                 db.ChangeTracker.AutoDetectChangesEnabled = false;
                 db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
 
-                // Begin fetching any updates to the dataset from the backend server
-                var mostRecentUpdate = db.Parts.OrderByDescending(p => p.ModifiedTicks).FirstOrDefault()?.ModifiedTicks;
-
                 var connection = db.Database.GetDbConnection();
                 connection.Open();
 
+                IEnumerable<Group>? groups = await GetGroups();
+                if (!db.Groups.Any())
+                {
+                    BulkInsertGroups(connection, groups!);
+                }
+
+                IEnumerable<SubGroup>? subGroups = await GetSubGroups();
+                if (!db.SubGroups.Any())
+                {
+                    BulkInsertSubGroups(connection, subGroups!);
+                }
+
+                // Begin fetching any updates to the dataset from the backend server
+                var mostRecentUpdate = db.Items.OrderByDescending(p => p.Id).FirstOrDefault()?.Id;
                 while (true)
                 {
-                    var request = new PartsRequest { MaxCount = 5000, ModifiedSinceTicks = mostRecentUpdate ?? -1 };
-                    var response = await manufacturingData.GetPartsAsync(request);
-                    var syncRemaining = response.ModifiedCount - response.Parts.Count;
-                    SyncCompleted += response.Parts.Count;
+                    var request = new ItemsRequest { MaxCount = 5000, ModifiedSinceTicks = mostRecentUpdate ?? -1 };
+                    var response = await GetItems(request);
+                    var syncRemaining = response!.ModifiedCount - response.Items.Count;
+                    SyncCompleted += response.Items.Count;
                     SyncTotal = SyncCompleted + syncRemaining;
 
-                    if (response.Parts.Count == 0)
+                    if (response.Items.Count == 0)
                     {
                         break;
                     }
                     else
                     {
-                        mostRecentUpdate = response.Parts.Last().ModifiedTicks;
-                        BulkInsert(connection, response.Parts);
+                        mostRecentUpdate = response.Items.Last().Id;
+                        BulkInsertItems(connection, response.Items);
                         OnUpdate?.Invoke();
                     }
                 }
@@ -158,31 +172,163 @@ namespace BlazorInventory.Data
                 transaction.Commit();
             }
 
-            static DbParameter AddNamedParameter(DbCommand command, string name)
+        }
+
+        private void BulkInsertItems(DbConnection connection, IEnumerable<Item> items)
+        {
+            // Since we're inserting so much data, we can save a huge amount of time by dropping down below EF Core and
+            // using the fastest bulk insertion technique for Sqlite.
+            using (var transaction = connection.BeginTransaction())
             {
-                var parameter = command.CreateParameter();
-                parameter.ParameterName = name;
-                command.Parameters.Add(parameter);
-                return parameter;
+                var command = connection.CreateCommand();
+                var Id = AddNamedParameter(command, "$Id");
+                var name = AddNamedParameter(command, "$Name");
+                var description = AddNamedParameter(command, "$Description");
+                var quantity = AddNamedParameter(command, "$Quantity");
+                var price = AddNamedParameter(command, "$Price");
+                var salesCount = AddNamedParameter(command, "$SalesCount");
+                var responsibleIdentifier = AddNamedParameter(command, "$ResponsibleIdentifier");
+                var subGroupId = AddNamedParameter(command, "$SubGroupId");
+                var stock = AddNamedParameter(command, "$Stock");
+
+                command.CommandText =
+                    $"INSERT INTO Item (Id, Name, Description, Quantity, Price, Stock, SalesCount, ResponsibleIdentifier, SubGroupId) " +
+                    $"VALUES (" +
+                    $"{Id.ParameterName}, " +
+                    $"{name.ParameterName}, " +
+                    $"{description.ParameterName}, " +
+                    $"{quantity.ParameterName}, " +
+                    $"{price.ParameterName}, " +
+                    $"{stock.ParameterName}, " +
+                    $"{salesCount.ParameterName}, " +
+                    $"{responsibleIdentifier.ParameterName}, " +
+                    $"{subGroupId.ParameterName})";
+
+                foreach (var item in items)
+                {
+                    Id.Value = item.Id;
+                    name.Value = item.Name;
+                    description.Value = item.Description;
+                    quantity.Value = item.Quantity;
+                    price.Value = item.Price;
+                    salesCount.Value = item.SalesCount;
+                    responsibleIdentifier.Value = item.ResponsibleIdentifier;
+                    subGroupId.Value = item.SubGroupId;
+                    stock.Value = item.Stock;
+                    command.ExecuteNonQuery();
+                }
+                transaction.Commit();
             }
         }
 
+        private void BulkInsertGroups(DbConnection connection, IEnumerable<Group> groups)
+        {
+            // Since we're inserting so much data, we can save a huge amount of time by dropping down below EF Core and
+            // using the fastest bulk insertion technique for Sqlite.
+            using (var transaction = connection.BeginTransaction())
+            {
+                var command = connection.CreateCommand();
+                var Id = AddNamedParameter(command, "$Id");
+                var name = AddNamedParameter(command, "$Name");
+                var description = AddNamedParameter(command, "$Description");
+
+                command.CommandText =
+                    $"INSERT INTO Groups (Id, Name, Description) " +
+                    $"VALUES (" +
+                    $"{Id.ParameterName}, " +
+                    $"{name.ParameterName}, " +
+                    $"{description.ParameterName})";
+
+                foreach (var item in groups)
+                {
+                    Id.Value = item.Id;
+                    name.Value = item.Name;
+                    description.Value = item.Description;
+                    command.ExecuteNonQuery();
+                }
+                transaction.Commit();
+            }
+        }
+
+        private void BulkInsertSubGroups(DbConnection connection, IEnumerable<SubGroup> subGroups)
+        {
+            // Since we're inserting so much data, we can save a huge amount of time by dropping down below EF Core and
+            // using the fastest bulk insertion technique for Sqlite.
+            using (var transaction = connection.BeginTransaction())
+            {
+                var command = connection.CreateCommand();
+                var Id = AddNamedParameter(command, "$Id");
+                var name = AddNamedParameter(command, "$Name");
+                var description = AddNamedParameter(command, "$Description");
+                var groupId = AddNamedParameter(command, "$GroupId");
+
+                command.CommandText =
+                    $"INSERT INTO SubGroup (Id, Name, Description, GroupId) " +
+                    $"VALUES (" +
+                    $"{Id.ParameterName}, " +
+                    $"{name.ParameterName}, " +
+                    $"{description.ParameterName}, " +
+                    $"{groupId.ParameterName})";
+
+                foreach (var item in subGroups)
+                {
+                    Id.Value = item.Id;
+                    name.Value = item.Name;
+                    description.Value = item.Description;
+                    groupId.Value = item.GroupId;
+                    command.ExecuteNonQuery();
+                }
+                transaction.Commit();
+            }
+        }
+
+        private static DbParameter AddNamedParameter(DbCommand command, string name)
+        {
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = name;
+            command.Parameters.Add(parameter);
+            return parameter;
+        }
 
         public async Task<ItemsResponse?> GetItems(ItemsRequest request)
         {
-            HttpResponseMessage response = await _httpClient.PostAsJsonAsync(
-                $"{_configuration["BackendOrigin"]}/api/items/request", 
-                request);
-
-            if (response == null || !response.IsSuccessStatusCode)
+            if (request == null)
             {
                 return new ItemsResponse();
             }
+            var queryParams = new Dictionary<string, string>
+            {
+                { nameof(request.ModifiedSinceTicks), request.ModifiedSinceTicks.ToString() },
+                { nameof(request.MaxCount), request.MaxCount.ToString() }
+            };
 
-            ItemsResponse? itemsResponse = await response.Content.ReadFromJsonAsync<ItemsResponse?>();
+            string queryString = string.Join("&", queryParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
+            var apiUrl = $"{_configuration["BackendOrigin"]}/api/items/request";
+
+            HttpResponseMessage response = await _httpClient.GetAsync($"{apiUrl}?{queryString}");
+            response.EnsureSuccessStatusCode();
+            ItemsResponse? itemsResponse = await response.Content.ReadFromJsonAsync<ItemsResponse>();
+            
             return itemsResponse;
         }
 
+        public async Task<IEnumerable<Group>?> GetGroups()
+        {
+            string apiUrl = $"{_configuration["BackendOrigin"]}/api/groups";
+            HttpResponseMessage response = await _httpClient.GetAsync(apiUrl);
+            response.EnsureSuccessStatusCode();
+            IEnumerable<Group>? groups = await response.Content.ReadFromJsonAsync<IEnumerable<Group>>();
+            return groups;
+        }
+
+        public async Task<IEnumerable<SubGroup>?> GetSubGroups()
+        {
+            string apiUrl = $"{_configuration["BackendOrigin"]}/api/subgroups";
+            HttpResponseMessage response = await _httpClient.GetAsync(apiUrl);
+            response.EnsureSuccessStatusCode();
+            IEnumerable<SubGroup>? subGroups = await response.Content.ReadFromJsonAsync<IEnumerable<SubGroup>>();
+            return subGroups;
+        }
     }
 }
 

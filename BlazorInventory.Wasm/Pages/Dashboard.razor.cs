@@ -67,6 +67,7 @@ namespace BlazorInventory.Wasm.Pages
 
         private async Task InitDashboardData()
         {
+            /*
             var items = clientSideDbContext?.Items.ToList();
             var item = new Item
             {
@@ -99,7 +100,7 @@ namespace BlazorInventory.Wasm.Pages
             locationWithMostParts = GetPartByPropertyCount(
                 parts, 
                 part => part.Location,
-                orderByDesc: true);
+                orderByDesc: true);*/
         }
 
         private static string? GetPartByPropertyCount(

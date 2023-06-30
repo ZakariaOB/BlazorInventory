@@ -2,8 +2,7 @@
 using BlazorInventory.Data.Repository;
 using BlazorInventory.Data.Request;
 using BlazorInventory.Data.Response;
-using Grpc.Core;
-using System.Data.Entity;
+using Microsoft.EntityFrameworkCore;
 
 namespace BlazorInventory.Server.Data.Repository
 {
@@ -18,6 +17,11 @@ namespace BlazorInventory.Server.Data.Repository
 
         public async Task<ItemsResponse> GetItems(ItemsRequest request)
         {
+            if (request.MaxCount == 0 || request.ModifiedSinceTicks == 0)
+            {
+                return new ItemsResponse();
+            }
+
             var modifiedItems = _dbContext.Items
                 .OrderBy(p => p.Id)
                 .Where(p => p.Id > request.ModifiedSinceTicks);

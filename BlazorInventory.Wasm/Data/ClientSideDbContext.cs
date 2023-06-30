@@ -6,8 +6,6 @@ namespace BlazorInventory.Data
 {
     internal partial class ClientSideDbContext : DbContext
     {
-        public DbSet<Part> Parts { get; set; } = default!;
-
         public ClientSideDbContext(DbContextOptions<ClientSideDbContext> options)
         : base(options)
         {

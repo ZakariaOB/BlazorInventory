@@ -2,6 +2,7 @@
 using BlazorInventory.Data;
 using BlazorInventory.Data.Repository;
 using BlazorInventory.Data.Request;
+using BlazorInventory.Data.Response;
 using Duende.IdentityServer.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,11 +25,21 @@ namespace BlazorInventory.Server.Controllers
             return Ok(items);
         }
 
-        [HttpPost("api/items/request")]
-        public IActionResult GetItems(ItemsRequest request)
+        [HttpGet("api/items/request")]
+        public async Task<IActionResult> GetItems(
+            [FromQuery] string modifiedSinceTicks, 
+            [FromQuery] string maxCount)
         {
-            var response = _itemRepository.GetItems(request);
-            
+            long mTicks = long.TryParse(modifiedSinceTicks, out long ticks) ? ticks : 0;
+            int mCount = int.TryParse(maxCount, out int count) ? count : 0;
+
+            ItemsRequest request = new()
+            {
+                MaxCount = mCount,
+                ModifiedSinceTicks = mTicks
+            };
+
+            ItemsResponse response = await _itemRepository.GetItems(request);
             return Ok(response);
         }
     }

@@ -9,6 +9,10 @@ namespace BlazorInventory.Server.Config
         public void Configure(EntityTypeBuilder<SubGroup> builder)
         {
             builder.ToTable("SubGroup");
+
+            builder.HasOne(p => p.Group)
+                .WithMany()
+                .HasForeignKey(p => p.GroupId);
         }
     }
 }
