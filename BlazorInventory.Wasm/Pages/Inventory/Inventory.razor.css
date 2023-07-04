@@ -5,6 +5,9 @@
     flex-direction: column;
     justify-content: space-between;
     margin-top: 0.1rem;
+    font-size: 14px;
+    font-family: system-ui, -apple-system, /* Firefox supports this but not yet `system-ui` */
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
 }
 
     .inventory-grid::after {
@@ -34,17 +37,17 @@
 }
 
 ::deep .col-name {
-    width: max(25vw, 10rem);
+    width: max(8vw, 8rem);
     text-overflow: ellipsis;
 }
 
 ::deep .col-category {
-    width: max(20vw, 9rem);
+    width: max(5vw, 9rem);
     text-overflow: ellipsis;
 }
 
-::deep .col-location {
-    width: max(10vw, 7rem);
+::deep .col-default {
+    width: 12rem;
 }
 
 ::deep thead {

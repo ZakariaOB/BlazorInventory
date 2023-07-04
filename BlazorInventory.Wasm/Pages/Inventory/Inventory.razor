@@ -1,10 +1,7 @@
-﻿@page "/"
-@page "/inventory"
-@using BlazorInventory.Data;
+﻿@using BlazorInventory.Data;
 @using Microsoft.EntityFrameworkCore
 @inject DataSynchronizer DataSynchronizer
 @implements IDisposable
-<PageTitle>Inventory</PageTitle>
 <SyncStatus />
 <ItemDetails Item="@selectedItem" OnHide="@(() => { selectedItem = null; })" />
 
@@ -12,56 +9,70 @@
 {
     <div class="inventory-grid">
         <Grid Virtualize="true" Items="@GetFilteredItems()" ItemKey="@(x => x.Id)" ItemSize="35">
-            <!--<TemplateColumn 
-                Title="Category" 
-                SortBy="@(items => items.SortByAscending(x => x.Category).ThenAscending(x => x.Subcategory))" Class="col-category">
-                <ChildContent>@context.Category / @context.Subcategory</ChildContent>
+            <TemplateColumn 
+                Title="Group" 
+                SortBy="@(items => items.SortByAscending(x => x.SubGroup.Group.Name).ThenAscending(x => x.SubGroup.Name))" Class="col-category">
+                <ChildContent>@context.SubGroup.Group.Name / @context.SubGroup.Name</ChildContent>
                 <ColumnOptions>
-                    <p>Category (@categories.Length)</p>
+                    <p>Group (@groups.Length)</p>
                     <select multiple class="w-64 bg-gray-100 border-grey-500 border my-4" 
-                    @bind="categories" 
-                    @onclick="@(() => subcategories = Array.Empty<string>())">
-                        @foreach (var name in db.Parts.Select(x => x.Category).Distinct())
+                    @bind="groups" 
+                    @onclick="@(() => subgroups = Array.Empty<string>())">
+                        @foreach (var name in db.Groups.Select(x => x.Name))
                         {
                             <option>@name</option>
                         }
                     </select>
 
-                    <p>Subcategory (@subcategories.Length)</p>
-                    <select multiple class="w-64 bg-gray-100 border-grey-500 border my-4" @bind="subcategories">
-                        @foreach (var name in db.Parts.Where(x => categories.Contains(x.Category)).Select(x => x.Subcategory).Distinct())
+                    <p>Sub Groups (@subgroups.Length)</p>
+                    <select multiple class="w-64 bg-gray-100 border-grey-500 border my-4" @bind="subgroups">
+                        @foreach (var name in db.SubGroups.Where(x => groups.Contains(x.Group.Name)).Select(x => x.Name).Distinct())
                         {
                             <option>@name</option>
                         }
                     </select>
-
-                    <div><button class="bg-gray-200 px-5 py-1 mb-2" @onclick="@(() => { categories = Array.Empty<string>(); subcategories = Array.Empty<string>(); })">Reset</button></div>
+                    <div>
+                        <button 
+                        class="bg-gray-200 px-5 py-1 mb-2" 
+                        @onclick="@(() => { groups = Array.Empty<string>(); subgroups = Array.Empty<string>(); })">Reset</button>
+                    </div>
                 </ColumnOptions>
             </TemplateColumn>
-            -->
             <PropertyColumn Title="Name" Property="@(x => x.Name)" Class="col-name" OnCellClicked="@((Item item) => { selectedItem = item; })">
                 <ColumnOptions>
                     <input @bind="searchName" @bind:event="oninput" type="search" placeholder="Search..." />
                 </ColumnOptions>
             </PropertyColumn>
+            <PropertyColumn Title="Description" Property="@(x => x.Description)" Class="col-default" />
+            <PropertyColumn Title="Responsible" Property="@(x => x.ResponsibleIdentifier)" Class="col-name" OnCellClicked="@((Item item) => { selectedItem = item; })">
+                <ColumnOptions>
+                    <input @bind="SearchResponsible" @bind:event="oninput" type="search" placeholder="Search..." />
+                </ColumnOptions>
+            </PropertyColumn>
 
-            <PropertyColumn Title="Responsible" Property="@(x => x.ResponsibleIdentifier)" Class="col-location" />
+            <PropertyColumn Title="Quantity" Property="@(x => x.Quantity)" Class="col-default" />
 
             <PropertyColumn Title="Stock" Property="@(x => x.Stock)" Format="N0" Align="Align.Right" Class="col-stock">
                 <ColumnOptions>
                     <p>Min stock</p>
-                    <input type="range" @bind="minStock" @bind:event="oninput" min="0" max="50000" />
+                    <input type="range" @bind="minStock" @bind:event="oninput" min="0" max="5000" />
                     <p>Max stock</p>
-                    <input type="range" @bind="maxStock" @bind:event="oninput" min="0" max="50000" />
+                    <input type="range" @bind="maxStock" @bind:event="oninput" min="0" max="5000" />
                 </ColumnOptions>
             </PropertyColumn>
+            <!--
+            <PropertyColumn Title="Price" Property="@(x => x.Price)" Format="N0" Align="Align.Right" Class="col-stock">
+                <ColumnOptions>
+                    <p>Min Price</p>
+                    <input type="range" @bind="minPrice" @bind:event="oninput" min="0" max="5000" />
+                    <p>Max Price</p>
+                    <input type="range" @bind="maxPrice" @bind:event="oninput" min="0" max="5000" />
+                </ColumnOptions>
+            </PropertyColumn>-->
+            <PropertyColumn Title="Price" Property="@(x => x.Price)" Format="N0" Align="Align.Right" Class="col-default" />
 
-            <PropertyColumn Title="Cost ($)" Property="@(x => x.Price/100)" Format="N0" Align="Align.Right" Class="col-cost" />
-
+            <PropertyColumn Title="Sales Count" Property="@(x => x.SalesCount)" Class="col-default" />
         </Grid>
-        <div class="status-bar">
-            Showing @GetFilteredItems()?.Count().ToString("N0") items
-        </div>
     </div>
 }
 else {
@@ -72,11 +83,20 @@ else {
 
     [Parameter] public string? SearchName { get; set; }
 
-    string[] categories = Array.Empty<string>();
-    string[] subcategories = Array.Empty<string>();
+    [Parameter] public string? ShowingItemsDescription { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnShowItemsPropertyUpdated { get; set; }
+
+
+    public string? SearchResponsible { get; set; }
+    string[] groups = Array.Empty<string>();
+    string[] subgroups = Array.Empty<string>();
     string searchName = string.Empty;
     int minStock, maxStock = 50000;
+    int minPrice, maxPrice = 5000;
     Item? selectedItem;
+
     IQueryable<Item>? GetFilteredItems()
     {
         if (db is null)
@@ -84,15 +104,19 @@ else {
             return null;
         }
 
-        var result = db.Items.AsNoTracking().AsQueryable();
-        /*if (categories.Any())
+        var result = db.Items.Include(i => i.SubGroup)
+               .ThenInclude(s => s.Group)
+               .AsNoTracking()
+               .AsQueryable();
+
+        if (groups.Any())
         {
-            result = result.Where(x => categories.Contains(x.Category));
+            result = result.Where(x => groups.Contains(x.SubGroup.Group.Name));
         }
-        if (subcategories.Any())
+        if (subgroups.Any())
         {
-            result = result.Where(x => subcategories.Contains(x.Subcategory));
-        }*/
+            result = result.Where(x => subgroups.Contains(x.SubGroup.Name));
+        }
         if (!string.IsNullOrEmpty(searchName))
         {
             result = result.Where(x => EF.Functions.Like(x.Name, searchName.Replace("%", "\\%") + "%", "\\"));
@@ -101,9 +125,17 @@ else {
         {
             result = result.Where(x => x.Stock >= minStock);
         }
-        if (maxStock < 50000)
+        if (maxStock < 5000)
         {
             result = result.Where(x => x.Stock <= maxStock);
+        }
+        if (minPrice > 0)
+        {
+            result = result.Where(x => x.Price >= minPrice);
+        }
+        if (maxPrice < 5000)
+        {
+            result = result.Where(x => x.Price <= maxPrice);
         }
         return result;
     }
@@ -112,11 +144,19 @@ else {
     {
         db = await DataSynchronizer.GetPreparedDbContextAsync();
         DataSynchronizer.OnUpdate += StateHasChanged;
+        DataSynchronizer.OnUpdate += UpdateShowItemsPropertyOnParent;
+        UpdateShowItemsPropertyOnParent();
     }
 
     protected override void OnParametersSet()
     {
         searchName = SearchName ?? string.Empty;
+    }
+
+    private void UpdateShowItemsPropertyOnParent()
+    {
+        string updatedValue = $"Showing {@GetFilteredItems()?.Count().ToString("N0")} items";
+        OnShowItemsPropertyUpdated.InvokeAsync(updatedValue);
     }
 
     public void Dispose()

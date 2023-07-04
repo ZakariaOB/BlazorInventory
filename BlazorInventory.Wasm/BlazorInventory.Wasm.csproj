@@ -45,4 +45,7 @@
     <ProjectReference Include="..\BlazorInventory.Data\BlazorInventory.Data.csproj" />
     <ProjectReference Include="..\QuickGrid\QuickGrid.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="wwwroot\js\" />
+  </ItemGroup>
 </Project>

@@ -15,10 +15,10 @@
 
 @if (syncException is not null)
 {
-    <div class="bg-gray-500 flex fixed text-white text-left z-10 left-0 right-0 bottom-5 w-96 m-auto p-5 rounded-xl" style="height: min-content; box-shadow: 0 4px 8px rgb(0 0 0 / 50%);">
-        <div role="alert">Unable to get updates from the server.<br />Check your internet connection.</div>
-        <button title="Close error popup" class="h-4 ml-auto" @onclick="@(() => { syncException = null; })">⨯</button>
-    </div>
+    /*
+    <div class="bg-blue-600 fixed text-white text-center z-10 left-0 right-0 bottom-5 w-96 m-auto p-5 rounded-xl" style="height: min-content; box-shadow: 0 4px 8px rgb(0 0 0 / 50%);">
+        <div>Unable to get updates from the server.<br />Check your internet connection</div>
+    </div>*/
 }
 
 @code {
